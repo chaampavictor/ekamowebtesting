@@ -2,10 +2,9 @@ import React, { Component } from "react";
 import Form from "react-validation/build/form";
 import Input from "react-validation/build/input";
 import CheckButton from "react-validation/build/button";
+import axiosInstance from "../services/Axios";
 
-import AuthService from "../services/auth.service";
-
-const required = value => {
+const required = (value) => {
   if (!value) {
     return (
       <div className="alert alert-danger" role="alert">
@@ -26,55 +25,73 @@ export default class Login extends Component {
       username: "",
       password: "",
       loading: false,
-      message: ""
+      message: "",
     };
   }
 
   onChangeUsername(e) {
     this.setState({
-      username: e.target.value
+      username: e.target.value,
     });
   }
 
   onChangePassword(e) {
     this.setState({
-      password: e.target.value
+      password: e.target.value,
     });
   }
 
-  handleLogin(e) {
+  async handleLogin(e) {
     e.preventDefault();
 
     this.setState({
       message: "",
-      loading: true
+      loading: true,
     });
 
     this.form.validateAll();
 
     if (this.checkBtn.context._errors.length === 0) {
-      AuthService.login(this.state.username, this.state.password).then(
-        () => {
-          this.props.history.push("/profile");
-          window.location.reload();
-        },
-        error => {
-          const resMessage =
-            (error.response &&
-              error.response.data &&
-              error.response.data.message) ||
-            error.message ||
-            error.toString();
+      const response = await axiosInstance.post("/token/obtain/", {
+        username: this.state.username,
+        password: this.state.password,
+      });
 
-          this.setState({
-            loading: false,
-            message: resMessage
-          });
-        }
-      );
+      axiosInstance.defaults.headers["Authorization"] =
+        "JWT " + response.data.access;
+      localStorage.setItem("access_token", response.data.access);
+      localStorage.setItem("refresh_token", response.data.refresh);
+      console.log(response);
+      this.setState({ isLoading: false, isAuthorized: true });
+      this.props.history.push("/profile");
+      window.location.reload();
+
+      // () => {
+      //       this.props.history.push("/profile");
+      //       window.location.reload();
+      //     },
+      // AuthService.login(this.state.username, this.state.password).then(
+      //   () => {
+      //     this.props.history.push("/profile");
+      //     window.location.reload();
+      //   },
+      //   (error) => {
+      //     const resMessage =
+      //       (error.response &&
+      //         error.response.data &&
+      //         error.response.data.message) ||
+      //       error.message ||
+      //       error.toString();
+
+      //     this.setState({
+      //       loading: false,
+      //       message: resMessage,
+      //     });
+      //   }
+      // );
     } else {
       this.setState({
-        loading: false
+        loading: false,
       });
     }
   }
@@ -91,12 +108,12 @@ export default class Login extends Component {
 
           <Form
             onSubmit={this.handleLogin}
-            ref={c => {
+            ref={(c) => {
               this.form = c;
             }}
           >
             <div className="form-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="username">Phone Number</label>
               <Input
                 type="text"
                 className="form-control"
@@ -140,7 +157,7 @@ export default class Login extends Component {
             )}
             <CheckButton
               style={{ display: "none" }}
-              ref={c => {
+              ref={(c) => {
                 this.checkBtn = c;
               }}
             />
